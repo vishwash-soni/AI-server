@@ -1,52 +1,69 @@
-const express = require('express');
-const Groq = require("groq-sdk");
-const systemPrompt = require("./systemPrompt")
-const app = express()
-const port = process.env.PORT || 3000
-require('dotenv').config();
+require("dotenv").config();
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const express = require("express");
+const Groq = require("groq-sdk");
+const systemPrompt = require("./systemPrompt");
+const cors = require("cors");
+
+const app = express();
+
+const port = process.env.PORT || 3000;
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
+
+app.use(cors({
+  origin: "http://localhost:5173",
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+app.use(express.json());
 
 async function getGroqChatCompletion(text) {
   return groq.chat.completions.create({
     messages: [
       {
         role: "system",
-        content: systemPrompt,
+        content: systemPrompt
       },
       {
-        role:"user",
-        content:text
+        role: "user",
+        content: text
       }
     ],
     model: "openai/gpt-oss-20b",
-    temperature: 1,
+    temperature: 1
   });
 }
 
-async function main(text) {
-  const chatCompletion = await getGroqChatCompletion(text);
-  return chatCompletion
-}
+app.get("/", (req, res) => {
+  res.send("Everything is good");
+});
 
-app.use(express.json());
+app.post("/", async (req, res) => {
+  try {
+    const { text } = req.body;
 
-app.get('/', (req, res) => {
-    res.send("everything is good")
-})
+    console.log("Received:", text);
 
+    const chatCompletion = await getGroqChatCompletion(text);
 
-app.post('/',(req, res)=>{
-  let text = req.body.text
-  let responseChat = main(text);
-    console.log(responseChat)
-    responseChat.then((value)=>{
-        res.send(value.choices[0].message.content)
-    })
-})
+    const response =
+      chatCompletion.choices[0]?.message?.content || "";
 
+    res.json(response)
 
+  } catch (error) {
+    console.error("Groq Error:", error);
+
+    res.status(500).json({
+      error: "Failed to generate response"
+    });
+  }
+});
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+  console.log(`Server running on port ${port}`);
+});
