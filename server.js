@@ -2,7 +2,7 @@ const express = require('express');
 const Groq = require("groq-sdk");
 const systemPrompt = require("./systemPrompt")
 const app = express()
-const port = 3000
+const port = process.env.PORT || 3000
 require('dotenv').config();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
